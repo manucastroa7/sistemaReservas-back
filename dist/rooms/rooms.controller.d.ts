@@ -3,8 +3,8 @@ import { Room, RoomStatus } from '../entities/room.entity';
 export declare class RoomsController {
     private readonly roomsService;
     constructor(roomsService: RoomsService);
-    findAll(): Promise<Room[]>;
-    create(room: Partial<Room>): Promise<Room>;
+    findAll(req: any): Promise<Room[]>;
+    create(room: Partial<Room>, req: any): Promise<Room>;
     updateStatus(id: string, status: RoomStatus): Promise<void>;
     update(id: string, room: Partial<Room>): Promise<Room>;
     remove(id: string): Promise<void>;

@@ -22,6 +22,14 @@ const maintenance_task_entity_1 = require("./entities/maintenance-task.entity");
 const user_entity_1 = require("./entities/user.entity");
 const hotel_entity_1 = require("./entities/hotel.entity");
 const hotels_module_1 = require("./hotels/hotels.module");
+const role_entity_1 = require("./entities/role.entity");
+const roles_module_1 = require("./roles/roles.module");
+const employee_entity_1 = require("./entities/employee.entity");
+const employee_payment_entity_1 = require("./entities/employee-payment.entity");
+const employees_module_1 = require("./employees/employees.module");
+const expense_entity_1 = require("./entities/expense.entity");
+const salary_history_entity_1 = require("./entities/salary-history.entity");
+const expenses_module_1 = require("./expenses/expenses.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -36,7 +44,7 @@ exports.AppModule = AppModule = __decorate([
                 username: process.env.DB_USER,
                 password: process.env.DB_PASSWORD,
                 database: process.env.DB_NAME,
-                entities: [room_entity_1.Room, guest_entity_1.Guest, reservation_entity_1.Reservation, maintenance_task_entity_1.MaintenanceTask, user_entity_1.User, hotel_entity_1.Hotel],
+                entities: [room_entity_1.Room, guest_entity_1.Guest, reservation_entity_1.Reservation, maintenance_task_entity_1.MaintenanceTask, user_entity_1.User, hotel_entity_1.Hotel, role_entity_1.Role, employee_entity_1.Employee, employee_payment_entity_1.EmployeePayment, expense_entity_1.Expense, salary_history_entity_1.SalaryHistory],
                 synchronize: true,
             }),
             rooms_module_1.RoomsModule,
@@ -45,6 +53,9 @@ exports.AppModule = AppModule = __decorate([
             auth_module_1.AuthModule,
             users_module_1.UsersModule,
             hotels_module_1.HotelsModule,
+            roles_module_1.RolesModule,
+            employees_module_1.EmployeesModule,
+            expenses_module_1.ExpensesModule,
         ],
     })
 ], AppModule);

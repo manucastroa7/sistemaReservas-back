@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { Reservation } from '../entities/reservation.entity';
 import { Room } from '../entities/room.entity';
 import { Guest } from '../entities/guest.entity';
@@ -14,22 +14,25 @@ export class ReservationsService {
     private roomsRepository: Repository<Room>,
   ) { }
 
-  async findAll(): Promise<any[]> {
+  async findAll(hotelId: string): Promise<any[]> {
+    console.log(`ReservationsService.findAll asking for hotelId: ${hotelId}`);
     const reservations = await this.reservationsRepository.find({
+      where: { hotel: { id: hotelId } },
       relations: ['rooms', 'guest'],
       order: { id: 'DESC' }
     });
+    console.log(`Found ${reservations.length} reservations.`);
 
     return reservations.map(r => ({
       ...r,
+      // Helper fields for frontend compatibility
       roomId: r.rooms && r.rooms.length > 0 ? r.rooms[0].id : null,
       roomIds: r.rooms ? r.rooms.map(room => room.id) : [],
-      // Keep legacy roomId for compatibility if needed, using the first room
       guestId: r.guest ? r.guest.id : null,
     }));
   }
 
-  async create(payload: any): Promise<Reservation | Reservation[]> {
+  async create(payload: any, hotelId: string): Promise<Reservation | Reservation[]> {
     console.log('📝 Saving Reservation Payload:', JSON.stringify(payload, null, 2));
 
     // Handle Bulk/Group Reservation
@@ -45,11 +48,10 @@ export class ReservationsService {
           groupId: groupId
         };
         // Recursive call for single creation logic
-        // Note: We need to wrap it in the expected structure for single create
         const res = await this.create({
           reservation: fullItem,
           guest: payload.guest
-        }) as Reservation;
+        }, hotelId) as Reservation;
         createdReservations.push(res);
       }
       return createdReservations;
@@ -57,45 +59,47 @@ export class ReservationsService {
 
     let reservationData;
 
-    // Flatten nested payload from recursive calls
+    // Flatten nested payload from recursive calls or direct calls
     if (payload.reservation) {
       reservationData = { ...payload.reservation, guest: payload.guest || payload.reservation.guest };
     } else {
       reservationData = payload;
     }
 
-    // Legacy support check (remove if confirmed unused, but keeping for safety for one version)
-    // api.ts now sends flattened { ...reservation, guest }.
-    if (reservationData.reservations) {
-      delete reservationData.reservations;
-    }
-
-    // Ensure ID is undefined if empty string to allow Auto-Gen
+    // Clean up payload structure
+    if (reservationData.reservations) delete reservationData.reservations;
     if (reservationData.id === '') delete reservationData.id;
+    if (reservationData.guestId === '') delete reservationData.guestId; // Ensure empty guestId is removed
+
+    // Explicitly remove guestId to rely on relation
+    delete reservationData.guestId;
 
     // Handle Guest Relationship
     if (reservationData.guest) {
-      // 1. If ID is empty string, delete it
-      if (reservationData.guest.id === '') delete reservationData.guest.id;
+      if (typeof reservationData.guest.id === 'string' && reservationData.guest.id === '') {
+        delete reservationData.guest.id;
+      }
 
-      // 2. If NO ID is present (new guest?), check if DNI already exists to avoid Unique Constraint Error
+      // Ensure guest has hotelId if new
+      if (!reservationData.guest.id) {
+        reservationData.guest.hotelId = hotelId;
+      }
+
       if (!reservationData.guest.id && reservationData.guest.dni) {
         const existingGuest = await this.reservationsRepository.manager.findOne(Guest, {
           where: { dni: reservationData.guest.dni }
         });
         if (existingGuest) {
-          // Use the existing guest's ID to perform an update instead of insert
-          reservationData.guest.id = existingGuest.id;
+          console.log(`Found existing guest: ${existingGuest.name} ${existingGuest.lastName}`);
+          reservationData.guest = existingGuest; // Use the entire existing entity
         }
       }
     }
 
     // Handle Multi-Room Logic
     let roomIds: number[] = [];
-
-    // Support both legacy roomId and new roomIds array
     if (reservationData.roomIds && Array.isArray(reservationData.roomIds)) {
-      roomIds = reservationData.roomIds.map(id => Number(id));
+      roomIds = reservationData.roomIds.map((id: any) => Number(id));
     } else if (reservationData.roomId) {
       roomIds = [Number(reservationData.roomId)];
     }
@@ -104,20 +108,19 @@ export class ReservationsService {
       throw new BadRequestException('At least one room must be selected.');
     }
 
-    // Check Availability for ALL requested rooms
-    // We need to ensure NONE of the requested rooms are occupied in the timeframe
+    // Check Availability
     const checkIn = reservationData.checkIn;
     const lastNight = reservationData.lastNight;
 
-    // Fetch existing reservations that overlap with this timeframe
     const conflictingReservations = await this.reservationsRepository
       .createQueryBuilder('reservation')
       .leftJoinAndSelect('reservation.rooms', 'room')
-      .where('reservation.status NOT IN (:...statuses)', { statuses: ['cancelled'] }) // Only cancelled are ignored. Checked-out counts as occupied history.
+      .where('reservation.status NOT IN (:...statuses)', { statuses: ['cancelled'] })
       .andWhere('reservation.checkIn <= :lastNight', { lastNight })
       .andWhere('reservation.lastNight >= :checkIn', { checkIn })
       .andWhere('room.id IN (:...roomIds)', { roomIds })
-      .andWhere(reservationData.id ? 'reservation.id != :id' : '1=1', { id: reservationData.id }) // Exclude self if update
+      .andWhere(reservationData.id ? 'reservation.id != :id' : '1=1', { id: reservationData.id })
+      .andWhere('reservation.hotelId = :hotelId', { hotelId })
       .getMany();
 
     if (conflictingReservations.length > 0) {
@@ -132,14 +135,48 @@ export class ReservationsService {
     const rooms = await this.roomsRepository.findBy({ id: In(roomIds) });
     reservationData.rooms = rooms;
 
-    // Remove legacy field to avoid TypeORM mapping errors (since we removed the column)
+    // Cleanup legacy fields
     delete reservationData.roomId;
-    delete reservationData.roomIds; // Also remove this as it's not a column, 'rooms' relation handles it.
+    delete reservationData.roomIds;
 
-    return this.reservationsRepository.save(reservationData);
+    reservationData.hotelId = hotelId;
+
+    const savedReservation = await this.reservationsRepository.save(reservationData);
+    console.log('✅ Reservation Saved:', savedReservation.id);
+    return savedReservation;
   }
 
   async update(id: string, update: Partial<Reservation>): Promise<void> {
+    const reservation = await this.reservationsRepository.findOne({
+      where: { id },
+      relations: ['rooms']
+    });
+
+    if (!reservation) {
+      throw new BadRequestException('Reservation not found');
+    }
+
+    // Check availability if reactivating
+    if (update.status === 'confirmed' && reservation.status === 'cancelled') {
+      console.log('🔄 Attempting to REACTIVATE reservation:', id);
+      const roomIds = reservation.rooms.map(r => r.id);
+
+      const conflictingReservations = await this.reservationsRepository
+        .createQueryBuilder('reservation')
+        .leftJoinAndSelect('reservation.rooms', 'room')
+        .where('reservation.status NOT IN (:...statuses)', { statuses: ['cancelled'] })
+        .andWhere('reservation.checkIn <= :lastNight', { lastNight: reservation.lastNight })
+        .andWhere('reservation.lastNight >= :checkIn', { checkIn: reservation.checkIn })
+        .andWhere('room.id IN (:...roomIds)', { roomIds })
+        .andWhere('reservation.id != :id', { id })
+        .getMany();
+
+      if (conflictingReservations.length > 0) {
+        console.warn('❌ Reactivation Blocked: Room occupied');
+        throw new BadRequestException('No se puede reactivar: Habitación ocupada en estas fechas.');
+      }
+    }
+
     await this.reservationsRepository.update(id, update);
   }
 
@@ -158,18 +195,15 @@ export class ReservationsService {
       .getOne();
 
     if (conflicting && conflicting.id !== excludeResId) {
-      return false; // Occupied
+      return false;
     }
-    return true; // Available
+    return true;
   }
 
-  async getOccupancy(date: string): Promise<number> {
-    // Count sum of pax for all active reservations satisfying: checkIn <= date AND lastNight >= date
-    // Note: If lastNight is inclusive staying night.
-
-    // We select reservations where date is between checkIn and lastNight (inclusive)
+  async getOccupancy(date: string, hotelId: string): Promise<number> {
     const activeReservations = await this.reservationsRepository.createQueryBuilder('reservation')
       .where('reservation.status IN (:...statuses)', { statuses: ['confirmed', 'checked-in'] })
+      .andWhere('reservation.hotelId = :hotelId', { hotelId })
       .andWhere('reservation.checkIn <= :date', { date })
       .andWhere('reservation.lastNight >= :date', { date })
       .getMany();
@@ -177,8 +211,8 @@ export class ReservationsService {
     const totalPax = activeReservations.reduce((sum, res) => sum + (res.pax || 1), 0);
     return totalPax;
   }
-  async blockRoom(roomId: number, start: string, end: string, reason: string): Promise<Reservation> {
-    // 1. Find or Create 'Mantenimiento' Guest
+
+  async blockRoom(roomId: number, start: string, end: string, reason: string, hotelId: string): Promise<Reservation> {
     let maintenanceGuest = await this.reservationsRepository.manager.findOne(Guest, {
       where: { dni: 'MANTENIMIENTO' }
     });
@@ -189,26 +223,24 @@ export class ReservationsService {
         lastName: 'BLOQUEO',
         dni: 'MANTENIMIENTO',
         email: 'mantenimiento@system.local',
-        phone: '000000'
+        phone: '000000',
+        hotelId
       });
     }
 
-    // 2. Create Reservation Payload
     const reservationData = {
       guest: maintenanceGuest,
-      roomId: roomId.toString(), // Support legacy schema if needed, but 'rooms' relation handles it
+      roomId: roomId.toString(),
       roomIds: [roomId.toString()],
       checkIn: start,
-      lastNight: end, // Inclusive
+      lastNight: end,
       checkOut: new Date(new Date(end).setDate(new Date(end).getDate() + 1)).toISOString().split('T')[0],
       pricePerNight: 0,
       status: 'maintenance',
       notes: reason
     };
 
-    // 3. Create using main create logic (handles validation)
-    // We cast to any because create expects specific payload structure
-    const result = await this.create({ reservation: reservationData, guest: maintenanceGuest });
+    const result = await this.create({ reservation: reservationData, guest: maintenanceGuest }, hotelId);
     return Array.isArray(result) ? result[0] : result;
   }
 }

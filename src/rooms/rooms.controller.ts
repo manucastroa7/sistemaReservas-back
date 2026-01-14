@@ -1,19 +1,24 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Request, UseGuards } from '@nestjs/common';
 import { RoomsService } from './rooms.service';
 import { Room, RoomStatus } from '../entities/room.entity';
 
+import { AuthGuard } from '@nestjs/passport';
+
 @Controller('rooms')
+@UseGuards(AuthGuard('jwt'))
 export class RoomsController {
     constructor(private readonly roomsService: RoomsService) { }
 
     @Get()
-    findAll() {
-        return this.roomsService.findAll();
+    findAll(@Request() req) {
+        // req.user is populated by JwtGuard (which should be global or applied here)
+        // Ensure user exists (guard should handle), and access hotelId
+        return this.roomsService.findAll(req.user.hotelId);
     }
 
     @Post()
-    create(@Body() room: Partial<Room>) {
-        return this.roomsService.create(room);
+    create(@Body() room: Partial<Room>, @Request() req) {
+        return this.roomsService.create(room, req.user.hotelId);
     }
 
     @Patch(':id/status')

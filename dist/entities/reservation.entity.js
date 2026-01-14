@@ -13,6 +13,7 @@ exports.Reservation = void 0;
 const typeorm_1 = require("typeorm");
 const guest_entity_1 = require("./guest.entity");
 const room_entity_1 = require("./room.entity");
+const hotel_entity_1 = require("./hotel.entity");
 let Reservation = class Reservation {
 };
 exports.Reservation = Reservation;
@@ -25,6 +26,14 @@ __decorate([
     (0, typeorm_1.JoinColumn)({ name: 'guest_id' }),
     __metadata("design:type", guest_entity_1.Guest)
 ], Reservation.prototype, "guest", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", String)
+], Reservation.prototype, "hotelId", void 0);
+__decorate([
+    (0, typeorm_1.ManyToOne)(() => hotel_entity_1.Hotel, (hotel) => hotel.reservations),
+    __metadata("design:type", hotel_entity_1.Hotel)
+], Reservation.prototype, "hotel", void 0);
 __decorate([
     (0, typeorm_1.ManyToMany)(() => room_entity_1.Room, (room) => room.reservations, { cascade: ['insert', 'update'] }),
     (0, typeorm_1.JoinTable)({

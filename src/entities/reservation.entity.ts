@@ -2,6 +2,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, ManyToMany, JoinTable } from 'typeorm';
 import { Guest } from './guest.entity';
 import { Room } from './room.entity';
+import { Hotel } from './hotel.entity';
 
 @Entity('reservations')
 export class Reservation {
@@ -11,6 +12,12 @@ export class Reservation {
   @ManyToOne(() => Guest, (guest) => guest.reservations, { cascade: ['insert', 'update'], onDelete: 'CASCADE' })
   @JoinColumn({ name: 'guest_id' })
   guest: Guest;
+
+  @Column({ nullable: true })
+  hotelId: string;
+
+  @ManyToOne(() => Hotel, (hotel) => hotel.reservations)
+  hotel: Hotel;
 
   @ManyToMany(() => Room, (room) => room.reservations, { cascade: ['insert', 'update'] })
   @JoinTable({

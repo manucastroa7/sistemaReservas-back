@@ -15,15 +15,16 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.GuestsController = void 0;
 const common_1 = require("@nestjs/common");
 const guests_service_1 = require("./guests.service");
+const passport_1 = require("@nestjs/passport");
 let GuestsController = class GuestsController {
     constructor(guestsService) {
         this.guestsService = guestsService;
     }
-    findAll() {
-        return this.guestsService.findAll();
+    findAll(req, query) {
+        return this.guestsService.findAll(req.user.hotelId, query);
     }
-    create(guest) {
-        return this.guestsService.create(guest);
+    create(guest, req) {
+        return this.guestsService.create(guest, req.user.hotelId);
     }
     update(id, guest) {
         return this.guestsService.update(id, guest);
@@ -31,19 +32,25 @@ let GuestsController = class GuestsController {
     remove(id) {
         return this.guestsService.remove(id);
     }
+    normalize(req) {
+        return this.guestsService.normalizeNames(req.user.hotelId);
+    }
 };
 exports.GuestsController = GuestsController;
 __decorate([
     (0, common_1.Get)(),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Query)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
+    __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", void 0)
 ], GuestsController.prototype, "findAll", null);
 __decorate([
     (0, common_1.Post)(),
     __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", void 0)
 ], GuestsController.prototype, "create", null);
 __decorate([
@@ -61,8 +68,16 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
 ], GuestsController.prototype, "remove", null);
+__decorate([
+    (0, common_1.Post)('normalize'),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], GuestsController.prototype, "normalize", null);
 exports.GuestsController = GuestsController = __decorate([
     (0, common_1.Controller)('guests'),
+    (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt')),
     __metadata("design:paramtypes", [guests_service_1.GuestsService])
 ], GuestsController);
 //# sourceMappingURL=guests.controller.js.map

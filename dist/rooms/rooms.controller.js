@@ -15,15 +15,16 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.RoomsController = void 0;
 const common_1 = require("@nestjs/common");
 const rooms_service_1 = require("./rooms.service");
+const passport_1 = require("@nestjs/passport");
 let RoomsController = class RoomsController {
     constructor(roomsService) {
         this.roomsService = roomsService;
     }
-    findAll() {
-        return this.roomsService.findAll();
+    findAll(req) {
+        return this.roomsService.findAll(req.user.hotelId);
     }
-    create(room) {
-        return this.roomsService.create(room);
+    create(room, req) {
+        return this.roomsService.create(room, req.user.hotelId);
     }
     updateStatus(id, status) {
         return this.roomsService.updateStatus(+id, status);
@@ -50,15 +51,17 @@ let RoomsController = class RoomsController {
 exports.RoomsController = RoomsController;
 __decorate([
     (0, common_1.Get)(),
+    __param(0, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
+    __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", void 0)
 ], RoomsController.prototype, "findAll", null);
 __decorate([
     (0, common_1.Post)(),
     __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", void 0)
 ], RoomsController.prototype, "create", null);
 __decorate([
@@ -110,6 +113,7 @@ __decorate([
 ], RoomsController.prototype, "deleteMaintenance", null);
 exports.RoomsController = RoomsController = __decorate([
     (0, common_1.Controller)('rooms'),
+    (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt')),
     __metadata("design:paramtypes", [rooms_service_1.RoomsService])
 ], RoomsController);
 //# sourceMappingURL=rooms.controller.js.map

@@ -13,6 +13,7 @@ exports.Room = void 0;
 const typeorm_1 = require("typeorm");
 const reservation_entity_1 = require("./reservation.entity");
 const maintenance_task_entity_1 = require("./maintenance-task.entity");
+const hotel_entity_1 = require("./hotel.entity");
 let Room = class Room {
 };
 exports.Room = Room;
@@ -36,6 +37,14 @@ __decorate([
     }),
     __metadata("design:type", String)
 ], Room.prototype, "status", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", String)
+], Room.prototype, "hotelId", void 0);
+__decorate([
+    (0, typeorm_1.ManyToOne)(() => hotel_entity_1.Hotel, (hotel) => hotel.rooms),
+    __metadata("design:type", hotel_entity_1.Hotel)
+], Room.prototype, "hotel", void 0);
 __decorate([
     (0, typeorm_1.ManyToMany)(() => reservation_entity_1.Reservation, (reservation) => reservation.rooms),
     __metadata("design:type", Array)

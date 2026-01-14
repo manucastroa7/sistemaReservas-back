@@ -27,16 +27,27 @@ let HotelsService = class HotelsService {
         await this.seedDefaultHotel();
     }
     async seedDefaultHotel() {
-        const defaultHotel = await this.hotelsRepository.findOne({ where: { name: 'Gran Hotel Avenida' } });
-        if (!defaultHotel) {
+        let targetHotel = await this.hotelsRepository.findOne({ where: { name: 'Gran Hotel Avenida' } });
+        if (!targetHotel) {
             console.log('Seeding Default Hotel...');
-            const hotel = await this.hotelsRepository.save({
+            targetHotel = await this.hotelsRepository.save({
                 name: 'Gran Hotel Avenida',
                 location: 'Mar del Plata',
                 address: 'Calle Falsa 123',
                 contactEmail: 'admin@granhotel.com',
             });
         }
+        await this.migrateOrphanData(targetHotel.id);
+    }
+    async migrateOrphanData(hotelId) {
+        console.log(`🔄 Checking for orphan data to assign to Hotel ID: ${hotelId}`);
+        const tables = ['rooms', 'reservations', 'guests', 'maintenance_tasks', 'user'];
+        for (const table of tables) {
+            const tableName = table === 'user' ? '"user"' : table;
+            const result = await this.dataSource.query(`UPDATE ${tableName} SET "hotelId" = $1 WHERE "hotelId" IS NULL`, [hotelId]);
+            console.log(`   - Migrated ${table}:`, result);
+        }
+        console.log('✅ Data Migration Check Completed.');
     }
     async create(hotelData) {
         const { name, location, address, email, password } = hotelData;
@@ -69,6 +80,20 @@ let HotelsService = class HotelsService {
     }
     async remove(id) {
         await this.hotelsRepository.delete(id);
+    }
+    async getDebugStats() {
+        const hotels = await this.hotelsRepository.find();
+        const counts = {};
+        const tables = ['rooms', 'guests', 'reservations', 'user'];
+        for (const table of tables) {
+            const tableName = table === 'user' ? '"user"' : table;
+            const res = await this.dataSource.query(`SELECT "hotelId", COUNT(*) as count FROM ${tableName} GROUP BY "hotelId"`);
+            counts[table] = res;
+        }
+        return {
+            hotels,
+            data_distribution: counts
+        };
     }
 };
 exports.HotelsService = HotelsService;

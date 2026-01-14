@@ -1,8 +1,11 @@
 import { Guest } from './guest.entity';
 import { Room } from './room.entity';
+import { Hotel } from './hotel.entity';
 export declare class Reservation {
     id: string;
     guest: Guest;
+    hotelId: string;
+    hotel: Hotel;
     rooms: Room[];
     checkIn: string;
     groupId: string;

@@ -24,11 +24,14 @@ let ReservationsService = class ReservationsService {
         this.reservationsRepository = reservationsRepository;
         this.roomsRepository = roomsRepository;
     }
-    async findAll() {
+    async findAll(hotelId) {
+        console.log(`ReservationsService.findAll asking for hotelId: ${hotelId}`);
         const reservations = await this.reservationsRepository.find({
+            where: { hotel: { id: hotelId } },
             relations: ['rooms', 'guest'],
             order: { id: 'DESC' }
         });
+        console.log(`Found ${reservations.length} reservations.`);
         return reservations.map(r => ({
             ...r,
             roomId: r.rooms && r.rooms.length > 0 ? r.rooms[0].id : null,
@@ -36,7 +39,7 @@ let ReservationsService = class ReservationsService {
             guestId: r.guest ? r.guest.id : null,
         }));
     }
-    async create(payload) {
+    async create(payload, hotelId) {
         console.log('📝 Saving Reservation Payload:', JSON.stringify(payload, null, 2));
         if (payload.reservations && Array.isArray(payload.reservations)) {
             const groupId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -50,7 +53,7 @@ let ReservationsService = class ReservationsService {
                 const res = await this.create({
                     reservation: fullItem,
                     guest: payload.guest
-                });
+                }, hotelId);
                 createdReservations.push(res);
             }
             return createdReservations;
@@ -62,26 +65,33 @@ let ReservationsService = class ReservationsService {
         else {
             reservationData = payload;
         }
-        if (reservationData.reservations) {
+        if (reservationData.reservations)
             delete reservationData.reservations;
-        }
         if (reservationData.id === '')
             delete reservationData.id;
+        if (reservationData.guestId === '')
+            delete reservationData.guestId;
+        delete reservationData.guestId;
         if (reservationData.guest) {
-            if (reservationData.guest.id === '')
+            if (typeof reservationData.guest.id === 'string' && reservationData.guest.id === '') {
                 delete reservationData.guest.id;
+            }
+            if (!reservationData.guest.id) {
+                reservationData.guest.hotelId = hotelId;
+            }
             if (!reservationData.guest.id && reservationData.guest.dni) {
                 const existingGuest = await this.reservationsRepository.manager.findOne(guest_entity_1.Guest, {
                     where: { dni: reservationData.guest.dni }
                 });
                 if (existingGuest) {
-                    reservationData.guest.id = existingGuest.id;
+                    console.log(`Found existing guest: ${existingGuest.name} ${existingGuest.lastName}`);
+                    reservationData.guest = existingGuest;
                 }
             }
         }
         let roomIds = [];
         if (reservationData.roomIds && Array.isArray(reservationData.roomIds)) {
-            roomIds = reservationData.roomIds.map(id => Number(id));
+            roomIds = reservationData.roomIds.map((id) => Number(id));
         }
         else if (reservationData.roomId) {
             roomIds = [Number(reservationData.roomId)];
@@ -99,6 +109,7 @@ let ReservationsService = class ReservationsService {
             .andWhere('reservation.lastNight >= :checkIn', { checkIn })
             .andWhere('room.id IN (:...roomIds)', { roomIds })
             .andWhere(reservationData.id ? 'reservation.id != :id' : '1=1', { id: reservationData.id })
+            .andWhere('reservation.hotelId = :hotelId', { hotelId })
             .getMany();
         if (conflictingReservations.length > 0) {
             const occupiedRoomIds = conflictingReservations.flatMap(r => r.rooms.map(room => room.id));
@@ -111,9 +122,36 @@ let ReservationsService = class ReservationsService {
         reservationData.rooms = rooms;
         delete reservationData.roomId;
         delete reservationData.roomIds;
-        return this.reservationsRepository.save(reservationData);
+        reservationData.hotelId = hotelId;
+        const savedReservation = await this.reservationsRepository.save(reservationData);
+        console.log('✅ Reservation Saved:', savedReservation.id);
+        return savedReservation;
     }
     async update(id, update) {
+        const reservation = await this.reservationsRepository.findOne({
+            where: { id },
+            relations: ['rooms']
+        });
+        if (!reservation) {
+            throw new common_1.BadRequestException('Reservation not found');
+        }
+        if (update.status === 'confirmed' && reservation.status === 'cancelled') {
+            console.log('🔄 Attempting to REACTIVATE reservation:', id);
+            const roomIds = reservation.rooms.map(r => r.id);
+            const conflictingReservations = await this.reservationsRepository
+                .createQueryBuilder('reservation')
+                .leftJoinAndSelect('reservation.rooms', 'room')
+                .where('reservation.status NOT IN (:...statuses)', { statuses: ['cancelled'] })
+                .andWhere('reservation.checkIn <= :lastNight', { lastNight: reservation.lastNight })
+                .andWhere('reservation.lastNight >= :checkIn', { checkIn: reservation.checkIn })
+                .andWhere('room.id IN (:...roomIds)', { roomIds })
+                .andWhere('reservation.id != :id', { id })
+                .getMany();
+            if (conflictingReservations.length > 0) {
+                console.warn('❌ Reactivation Blocked: Room occupied');
+                throw new common_1.BadRequestException('No se puede reactivar: Habitación ocupada en estas fechas.');
+            }
+        }
         await this.reservationsRepository.update(id, update);
     }
     async checkAvailability(roomId, start, end, excludeResId) {
@@ -130,16 +168,17 @@ let ReservationsService = class ReservationsService {
         }
         return true;
     }
-    async getOccupancy(date) {
+    async getOccupancy(date, hotelId) {
         const activeReservations = await this.reservationsRepository.createQueryBuilder('reservation')
             .where('reservation.status IN (:...statuses)', { statuses: ['confirmed', 'checked-in'] })
+            .andWhere('reservation.hotelId = :hotelId', { hotelId })
             .andWhere('reservation.checkIn <= :date', { date })
             .andWhere('reservation.lastNight >= :date', { date })
             .getMany();
         const totalPax = activeReservations.reduce((sum, res) => sum + (res.pax || 1), 0);
         return totalPax;
     }
-    async blockRoom(roomId, start, end, reason) {
+    async blockRoom(roomId, start, end, reason, hotelId) {
         let maintenanceGuest = await this.reservationsRepository.manager.findOne(guest_entity_1.Guest, {
             where: { dni: 'MANTENIMIENTO' }
         });
@@ -149,7 +188,8 @@ let ReservationsService = class ReservationsService {
                 lastName: 'BLOQUEO',
                 dni: 'MANTENIMIENTO',
                 email: 'mantenimiento@system.local',
-                phone: '000000'
+                phone: '000000',
+                hotelId
             });
         }
         const reservationData = {
@@ -163,7 +203,7 @@ let ReservationsService = class ReservationsService {
             status: 'maintenance',
             notes: reason
         };
-        const result = await this.create({ reservation: reservationData, guest: maintenanceGuest });
+        const result = await this.create({ reservation: reservationData, guest: maintenanceGuest }, hotelId);
         return Array.isArray(result) ? result[0] : result;
     }
 };

@@ -17,24 +17,37 @@ export class HotelsService implements OnModuleInit {
     }
 
     async seedDefaultHotel() {
-        const defaultHotel = await this.hotelsRepository.findOne({ where: { name: 'Gran Hotel Avenida' } });
-        if (!defaultHotel) {
+        let targetHotel = await this.hotelsRepository.findOne({ where: { name: 'Gran Hotel Avenida' } });
+        if (!targetHotel) {
             console.log('Seeding Default Hotel...');
-            const hotel = await this.hotelsRepository.save({
+            targetHotel = await this.hotelsRepository.save({
                 name: 'Gran Hotel Avenida',
                 location: 'Mar del Plata',
                 address: 'Calle Falsa 123',
                 contactEmail: 'admin@granhotel.com',
             });
-
-            // We need to inject UsersService to seed the admin user, but circular dependency might be an issue.
-            // For simplicity in this seed method, we might need a different approach or just let the user create it manually first?
-            // User asked for it to be seeded. Let's try to do it properly with UsersService if available, 
-            // or just use a repository if we can't easily inject the service here without valid module structure.
-            // Ideally HotelsModule shouldn't depend on UsersModule to avoid circularity if UsersModule depends on HotelsModule (which it does for Entity).
-            // So we might need to seed this in the AppModule or a separate Seeder service.
-            // However, to keep it simple, I'll move the Admin seeding to the UsersService seed method since UsersService already seeds SuperAdmin.
         }
+
+        // Always attempt migration of orphan data
+        await this.migrateOrphanData(targetHotel.id);
+    }
+
+    async migrateOrphanData(hotelId: string) {
+        console.log(`🔄 Checking for orphan data to assign to Hotel ID: ${hotelId}`);
+        const tables = ['rooms', 'reservations', 'guests', 'maintenance_tasks', 'user']; // 'user' table name is "user" in Postgres
+
+        for (const table of tables) {
+            // Quote table name specifically for 'user'
+            const tableName = table === 'user' ? '"user"' : table;
+            const result: any = await this.dataSource.query(
+                `UPDATE ${tableName} SET "hotelId" = $1 WHERE "hotelId" IS NULL`,
+                [hotelId]
+            );
+            // Result structure depends on driver. Postgres usually returns [ [], count ] or similar.
+            // TypeORM query result for update is usually [affected_rows, meta] or similar.
+            console.log(`   - Migrated ${table}:`, result);
+        }
+        console.log('✅ Data Migration Check Completed.');
     }
 
     async create(hotelData: any): Promise<Hotel> {
@@ -75,5 +88,23 @@ export class HotelsService implements OnModuleInit {
 
     async remove(id: string): Promise<void> {
         await this.hotelsRepository.delete(id);
+    }
+
+    async getDebugStats() {
+        const hotels = await this.hotelsRepository.find();
+
+        const counts: any = {};
+        const tables = ['rooms', 'guests', 'reservations', 'user'];
+
+        for (const table of tables) {
+            const tableName = table === 'user' ? '"user"' : table;
+            const res = await this.dataSource.query(`SELECT "hotelId", COUNT(*) as count FROM ${tableName} GROUP BY "hotelId"`);
+            counts[table] = res;
+        }
+
+        return {
+            hotels,
+            data_distribution: counts
+        };
     }
 }

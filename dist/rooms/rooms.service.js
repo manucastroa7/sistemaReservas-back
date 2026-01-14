@@ -19,11 +19,14 @@ const typeorm_2 = require("typeorm");
 const room_entity_1 = require("../entities/room.entity");
 const reservation_entity_1 = require("../entities/reservation.entity");
 const maintenance_task_entity_1 = require("../entities/maintenance-task.entity");
+const hotel_entity_1 = require("../entities/hotel.entity");
+const typeorm_3 = require("typeorm");
 let RoomsService = class RoomsService {
-    constructor(roomsRepository, reservationsRepository, maintenanceRepository) {
+    constructor(roomsRepository, reservationsRepository, maintenanceRepository, dataSource) {
         this.roomsRepository = roomsRepository;
         this.reservationsRepository = reservationsRepository;
         this.maintenanceRepository = maintenanceRepository;
+        this.dataSource = dataSource;
     }
     async onModuleInit() {
         console.log('🔄 Validating Room Inventory...');
@@ -60,11 +63,16 @@ let RoomsService = class RoomsService {
         for (const r of initialRooms) {
             const existing = await this.roomsRepository.findOneBy({ id: r.id });
             if (!existing) {
-                await this.roomsRepository.save({
-                    ...r,
-                    capacity: r.type === 'TRIPLE' ? 3 : r.capacity,
-                    status: 'clean'
-                });
+                const defaultHotel = await this.dataSource.getRepository(hotel_entity_1.Hotel).findOne({ where: { name: 'Gran Hotel Avenida' } });
+                if (defaultHotel) {
+                    await this.roomsRepository.save({
+                        ...r,
+                        capacity: r.type === 'TRIPLE' ? 3 : r.capacity,
+                        status: 'clean',
+                        hotel: defaultHotel,
+                        hotelId: defaultHotel.id
+                    });
+                }
             }
         }
         await this.roomsRepository
@@ -76,9 +84,10 @@ let RoomsService = class RoomsService {
         const count = await this.roomsRepository.count();
         console.log(`📊 Total rooms in DB: ${count}`);
     }
-    findAll() {
-        console.log('🔎 RoomsService.findAll executing...');
+    findAll(hotelId) {
+        console.log('🔎 RoomsService.findAll executing for hotel:', hotelId);
         return this.roomsRepository.find({
+            where: { hotelId },
             relations: ['maintenanceTasks'],
             order: { id: 'ASC' }
         });
@@ -91,7 +100,8 @@ let RoomsService = class RoomsService {
             description,
             room,
             status: 'pending',
-            requestDate: requestDate ? new Date(requestDate) : new Date()
+            requestDate: requestDate ? new Date(requestDate) : new Date(),
+            hotelId: room.hotelId
         });
         if (room.status !== 'maintenance') {
             room.status = 'maintenance';
@@ -114,8 +124,8 @@ let RoomsService = class RoomsService {
     async deleteMaintenanceTask(taskId) {
         await this.maintenanceRepository.delete(taskId);
     }
-    create(room) {
-        return this.roomsRepository.save(room);
+    create(room, hotelId) {
+        return this.roomsRepository.save({ ...room, hotelId });
     }
     async updateStatus(id, status) {
         await this.roomsRepository.update(id, { status });
@@ -147,6 +157,7 @@ exports.RoomsService = RoomsService = __decorate([
     __param(2, (0, typeorm_1.InjectRepository)(maintenance_task_entity_1.MaintenanceTask)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
         typeorm_2.Repository,
-        typeorm_2.Repository])
+        typeorm_2.Repository,
+        typeorm_3.DataSource])
 ], RoomsService);
 //# sourceMappingURL=rooms.service.js.map

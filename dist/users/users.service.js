@@ -28,7 +28,18 @@ let UsersService = class UsersService {
         await this.seedSuperAdmin();
     }
     async findOne(username) {
-        return this.usersRepository.findOne({ where: { email: username } });
+        return this.usersRepository.findOne({ where: { email: username }, relations: ['hotel', 'customRole'] });
+    }
+    async update(id, updates) {
+        const user = await this.usersRepository.findOne({ where: { id } });
+        if (!user) {
+            throw new Error('User not found');
+        }
+        if (updates.password) {
+            updates.password = await bcrypt.hash(updates.password, 10);
+        }
+        Object.assign(user, updates);
+        return this.usersRepository.save(user);
     }
     async create(userData) {
         const newUser = this.usersRepository.create(userData);
@@ -78,9 +89,9 @@ let UsersService = class UsersService {
     }
     async findAll(hotelId) {
         if (hotelId) {
-            return this.usersRepository.find({ where: { hotelId } });
+            return this.usersRepository.find({ where: { hotelId }, relations: ['hotel', 'customRole'] });
         }
-        return this.usersRepository.find();
+        return this.usersRepository.find({ relations: ['hotel', 'customRole'] });
     }
 };
 exports.UsersService = UsersService;

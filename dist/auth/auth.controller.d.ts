@@ -10,6 +10,9 @@ export declare class AuthController {
             role: any;
             firstName: any;
             lastName: any;
+            hotelId: any;
+            hotelName: any;
+            permissions: string[];
         };
     }>;
     getProfile(req: any): any;
@@ -21,6 +24,9 @@ export declare class AuthController {
             role: any;
             firstName: any;
             lastName: any;
+            hotelId: any;
+            hotelName: any;
+            permissions: string[];
         };
     }>;
 }

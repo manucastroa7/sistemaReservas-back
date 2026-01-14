@@ -20,7 +20,17 @@ export class AuthService {
     }
 
     async login(user: any) {
-        const payload = { email: user.email, sub: user.id, role: user.role };
+        let permissions: string[] = [];
+
+        if (user.role === 'superadmin') {
+            permissions = ['all'];
+        } else if (user.role === 'admin') {
+            permissions = ['all']; // Admins have full access to their hotel
+        } else if (user.customRole && user.customRole.permissions) {
+            permissions = user.customRole.permissions;
+        }
+
+        const payload = { email: user.email, sub: user.id, role: user.role, hotelId: user.hotelId };
         return {
             access_token: this.jwtService.sign(payload),
             user: {
@@ -28,7 +38,10 @@ export class AuthService {
                 email: user.email,
                 role: user.role,
                 firstName: user.firstName,
-                lastName: user.lastName
+                lastName: user.lastName,
+                hotelId: user.hotelId,
+                hotelName: user.hotel?.name,
+                permissions: permissions
             }
         };
     }

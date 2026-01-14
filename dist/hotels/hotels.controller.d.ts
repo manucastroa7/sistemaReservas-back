@@ -7,4 +7,9 @@ export declare class HotelsController {
     findOne(id: string): Promise<import("../entities/hotel.entity").Hotel>;
     update(id: string, updateData: any): Promise<void>;
     remove(id: string): Promise<void>;
+    migrate(id: string): Promise<void>;
+    getDebugStats(): Promise<{
+        hotels: import("../entities/hotel.entity").Hotel[];
+        data_distribution: any;
+    }>;
 }

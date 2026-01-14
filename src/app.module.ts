@@ -13,6 +13,14 @@ import { MaintenanceTask } from './entities/maintenance-task.entity';
 import { User } from './entities/user.entity';
 import { Hotel } from './entities/hotel.entity';
 import { HotelsModule } from './hotels/hotels.module';
+import { Role } from './entities/role.entity';
+import { RolesModule } from './roles/roles.module';
+import { Employee } from './entities/employee.entity';
+import { EmployeePayment } from './entities/employee-payment.entity';
+import { EmployeesModule } from './employees/employees.module';
+import { Expense } from './entities/expense.entity';
+import { SalaryHistory } from './entities/salary-history.entity';
+import { ExpensesModule } from './expenses/expenses.module';
 
 @Module({
   imports: [
@@ -24,7 +32,7 @@ import { HotelsModule } from './hotels/hotels.module';
       username: process.env.DB_USER,
       password: process.env.DB_PASSWORD,
       database: process.env.DB_NAME,
-      entities: [Room, Guest, Reservation, MaintenanceTask, User, Hotel],
+      entities: [Room, Guest, Reservation, MaintenanceTask, User, Hotel, Role, Employee, EmployeePayment, Expense, SalaryHistory],
       synchronize: true, // Desactivar en producción
     }),
     RoomsModule,
@@ -33,6 +41,9 @@ import { HotelsModule } from './hotels/hotels.module';
     AuthModule,
     UsersModule,
     HotelsModule,
+    RolesModule,
+    EmployeesModule,
+    ExpensesModule,
   ],
 })
 export class AppModule { }

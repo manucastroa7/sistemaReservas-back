@@ -5,10 +5,10 @@ export declare class ReservationsService {
     private reservationsRepository;
     private roomsRepository;
     constructor(reservationsRepository: Repository<Reservation>, roomsRepository: Repository<Room>);
-    findAll(): Promise<any[]>;
-    create(payload: any): Promise<Reservation | Reservation[]>;
+    findAll(hotelId: string): Promise<any[]>;
+    create(payload: any, hotelId: string): Promise<Reservation | Reservation[]>;
     update(id: string, update: Partial<Reservation>): Promise<void>;
     checkAvailability(roomId: number, start: string, end: string, excludeResId?: string): Promise<boolean>;
-    getOccupancy(date: string): Promise<number>;
-    blockRoom(roomId: number, start: string, end: string, reason: string): Promise<Reservation>;
+    getOccupancy(date: string, hotelId: string): Promise<number>;
+    blockRoom(roomId: number, start: string, end: string, reason: string, hotelId: string): Promise<Reservation>;
 }

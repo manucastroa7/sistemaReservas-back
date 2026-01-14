@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.MaintenanceTask = void 0;
 const typeorm_1 = require("typeorm");
 const room_entity_1 = require("./room.entity");
+const hotel_entity_1 = require("./hotel.entity");
 let MaintenanceTask = class MaintenanceTask {
 };
 exports.MaintenanceTask = MaintenanceTask;
@@ -40,6 +41,14 @@ __decorate([
     (0, typeorm_1.JoinColumn)({ name: 'room_id' }),
     __metadata("design:type", room_entity_1.Room)
 ], MaintenanceTask.prototype, "room", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", String)
+], MaintenanceTask.prototype, "hotelId", void 0);
+__decorate([
+    (0, typeorm_1.ManyToOne)(() => hotel_entity_1.Hotel, (hotel) => hotel.maintenanceTasks),
+    __metadata("design:type", hotel_entity_1.Hotel)
+], MaintenanceTask.prototype, "hotel", void 0);
 exports.MaintenanceTask = MaintenanceTask = __decorate([
     (0, typeorm_1.Entity)('maintenance_tasks')
 ], MaintenanceTask);

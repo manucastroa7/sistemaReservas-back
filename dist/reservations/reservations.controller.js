@@ -15,29 +15,30 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ReservationsController = void 0;
 const common_1 = require("@nestjs/common");
 const reservations_service_1 = require("./reservations.service");
+const passport_1 = require("@nestjs/passport");
 let ReservationsController = class ReservationsController {
     constructor(reservationsService) {
         this.reservationsService = reservationsService;
     }
-    findAll() {
-        return this.reservationsService.findAll();
+    findAll(req) {
+        return this.reservationsService.findAll(req.user.hotelId);
     }
-    getOccupancy(date) {
+    getOccupancy(date, req) {
         if (!date) {
             const today = new Date().toISOString().split('T')[0];
-            return this.reservationsService.getOccupancy(today);
+            return this.reservationsService.getOccupancy(today, req.user.hotelId);
         }
-        return this.reservationsService.getOccupancy(date);
+        return this.reservationsService.getOccupancy(date, req.user.hotelId);
     }
     async checkAvailability(roomId, start, end, exclude) {
         const isAvailable = await this.reservationsService.checkAvailability(Number(roomId), start, end, exclude);
         return { available: isAvailable };
     }
-    create(reservation) {
-        return this.reservationsService.create(reservation);
+    create(reservation, req) {
+        return this.reservationsService.create(reservation, req.user.hotelId);
     }
-    blockRoom(body) {
-        return this.reservationsService.blockRoom(body.roomId, body.start, body.end, body.reason);
+    blockRoom(body, req) {
+        return this.reservationsService.blockRoom(body.roomId, body.start, body.end, body.reason, req.user.hotelId);
     }
     update(id, update) {
         return this.reservationsService.update(id, update);
@@ -46,15 +47,17 @@ let ReservationsController = class ReservationsController {
 exports.ReservationsController = ReservationsController;
 __decorate([
     (0, common_1.Get)(),
+    __param(0, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
+    __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", void 0)
 ], ReservationsController.prototype, "findAll", null);
 __decorate([
     (0, common_1.Get)('occupancy'),
     __param(0, (0, common_1.Query)('date')),
+    __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
+    __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", void 0)
 ], ReservationsController.prototype, "getOccupancy", null);
 __decorate([
@@ -70,15 +73,17 @@ __decorate([
 __decorate([
     (0, common_1.Post)(),
     __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", void 0)
 ], ReservationsController.prototype, "create", null);
 __decorate([
     (0, common_1.Post)('block'),
     __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", void 0)
 ], ReservationsController.prototype, "blockRoom", null);
 __decorate([
@@ -91,6 +96,7 @@ __decorate([
 ], ReservationsController.prototype, "update", null);
 exports.ReservationsController = ReservationsController = __decorate([
     (0, common_1.Controller)('reservations'),
+    (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt')),
     __metadata("design:paramtypes", [reservations_service_1.ReservationsService])
 ], ReservationsController);
 //# sourceMappingURL=reservations.controller.js.map

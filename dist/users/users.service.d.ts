@@ -7,6 +7,7 @@ export declare class UsersService implements OnModuleInit {
     constructor(usersRepository: Repository<User>, dataSource: DataSource);
     onModuleInit(): Promise<void>;
     findOne(username: string): Promise<User | undefined>;
+    update(id: string, updates: Partial<User>): Promise<User>;
     create(userData: Partial<User>): Promise<User>;
     seedSuperAdmin(): Promise<void>;
     findAll(hotelId?: string): Promise<User[]>;

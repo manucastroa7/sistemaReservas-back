@@ -13,6 +13,9 @@ export declare class AuthService {
             role: any;
             firstName: any;
             lastName: any;
+            hotelId: any;
+            hotelName: any;
+            permissions: string[];
         };
     }>;
     impersonate(hotelId: string): Promise<{
@@ -23,6 +26,9 @@ export declare class AuthService {
             role: any;
             firstName: any;
             lastName: any;
+            hotelId: any;
+            hotelName: any;
+            permissions: string[];
         };
     }>;
 }

@@ -4,6 +4,8 @@ import { Repository } from 'typeorm';
 import { Room, RoomStatus } from '../entities/room.entity';
 import { Reservation } from '../entities/reservation.entity';
 import { MaintenanceTask } from '../entities/maintenance-task.entity';
+import { Hotel } from '../entities/hotel.entity';
+import { DataSource } from 'typeorm';
 
 @Injectable()
 export class RoomsService implements OnModuleInit {
@@ -14,6 +16,7 @@ export class RoomsService implements OnModuleInit {
         private reservationsRepository: Repository<Reservation>,
         @InjectRepository(MaintenanceTask)
         private maintenanceRepository: Repository<MaintenanceTask>,
+        private dataSource: DataSource,
     ) { }
 
     async onModuleInit() {
@@ -54,11 +57,17 @@ export class RoomsService implements OnModuleInit {
         for (const r of initialRooms) {
             const existing = await this.roomsRepository.findOneBy({ id: r.id });
             if (!existing) {
-                await this.roomsRepository.save({
-                    ...r,
-                    capacity: r.type === 'TRIPLE' ? 3 : r.capacity,
-                    status: 'clean' as RoomStatus
-                });
+                // Find default hotel
+                const defaultHotel = await this.dataSource.getRepository(Hotel).findOne({ where: { name: 'Gran Hotel Avenida' } });
+                if (defaultHotel) {
+                    await this.roomsRepository.save({
+                        ...r,
+                        capacity: r.type === 'TRIPLE' ? 3 : r.capacity,
+                        status: 'clean' as RoomStatus,
+                        hotel: defaultHotel,
+                        hotelId: defaultHotel.id
+                    });
+                }
             }
         }
 
@@ -78,9 +87,10 @@ export class RoomsService implements OnModuleInit {
         console.log(`📊 Total rooms in DB: ${count}`);
     }
 
-    findAll(): Promise<Room[]> {
-        console.log('🔎 RoomsService.findAll executing...');
+    findAll(hotelId: string): Promise<Room[]> {
+        console.log('🔎 RoomsService.findAll executing for hotel:', hotelId);
         return this.roomsRepository.find({
+            where: { hotelId },
             relations: ['maintenanceTasks'],
             order: { id: 'ASC' }
         });
@@ -97,7 +107,8 @@ export class RoomsService implements OnModuleInit {
             description,
             room,
             status: 'pending',
-            requestDate: requestDate ? new Date(requestDate) : new Date()
+            requestDate: requestDate ? new Date(requestDate) : new Date(),
+            hotelId: room.hotelId
         });
 
         // Optional: Auto-status update?
@@ -127,8 +138,8 @@ export class RoomsService implements OnModuleInit {
         await this.maintenanceRepository.delete(taskId);
     }
 
-    create(room: Partial<Room>): Promise<Room> {
-        return this.roomsRepository.save(room);
+    create(room: Partial<Room>, hotelId: string): Promise<Room> {
+        return this.roomsRepository.save({ ...room, hotelId });
     }
 
     async updateStatus(id: number, status: RoomStatus): Promise<void> {

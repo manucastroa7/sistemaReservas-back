@@ -35,6 +35,12 @@ let HotelsController = class HotelsController {
     remove(id) {
         return this.hotelsService.remove(id);
     }
+    migrate(id) {
+        return this.hotelsService.migrateOrphanData(id);
+    }
+    getDebugStats() {
+        return this.hotelsService.getDebugStats();
+    }
 };
 exports.HotelsController = HotelsController;
 __decorate([
@@ -62,7 +68,7 @@ __decorate([
 ], HotelsController.prototype, "findOne", null);
 __decorate([
     (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt')),
-    (0, common_1.Put)(':id'),
+    (0, common_1.Patch)(':id'),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -77,6 +83,19 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
 ], HotelsController.prototype, "remove", null);
+__decorate([
+    (0, common_1.Post)('migrate/:id'),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], HotelsController.prototype, "migrate", null);
+__decorate([
+    (0, common_1.Get)('debug-stats'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], HotelsController.prototype, "getDebugStats", null);
 exports.HotelsController = HotelsController = __decorate([
     (0, common_1.Controller)('hotels'),
     __metadata("design:paramtypes", [hotels_service_1.HotelsService])

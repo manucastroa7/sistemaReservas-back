@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Delete, Put, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, Patch, UseGuards } from '@nestjs/common';
 import { HotelsService } from './hotels.service';
 import { AuthGuard } from '@nestjs/passport';
 
@@ -25,7 +25,7 @@ export class HotelsController {
     }
 
     @UseGuards(AuthGuard('jwt'))
-    @Put(':id')
+    @Patch(':id')
     update(@Param('id') id: string, @Body() updateData: any) {
         return this.hotelsService.update(id, updateData);
     }
@@ -34,5 +34,14 @@ export class HotelsController {
     @Delete(':id')
     remove(@Param('id') id: string) {
         return this.hotelsService.remove(id);
+    }
+    @Post('migrate/:id')
+    migrate(@Param('id') id: string) {
+        return this.hotelsService.migrateOrphanData(id);
+    }
+
+    @Get('debug-stats')
+    getDebugStats() {
+        return this.hotelsService.getDebugStats();
     }
 }

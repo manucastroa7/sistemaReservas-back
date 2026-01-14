@@ -12,11 +12,15 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.User = exports.UserRole = void 0;
 const typeorm_1 = require("typeorm");
 const hotel_entity_1 = require("./hotel.entity");
+const role_entity_1 = require("./role.entity");
 var UserRole;
 (function (UserRole) {
     UserRole["SUPERADMIN"] = "superadmin";
     UserRole["ADMIN"] = "admin";
     UserRole["EMPLOYEE"] = "employee";
+    UserRole["ADMIN_EMPLOYEE"] = "admin_employee";
+    UserRole["CLEANING_EMPLOYEE"] = "cleaning_employee";
+    UserRole["MAINTENANCE_EMPLOYEE"] = "maintenance_employee";
 })(UserRole || (exports.UserRole = UserRole = {}));
 let User = class User {
 };
@@ -54,9 +58,37 @@ __decorate([
     __metadata("design:type", String)
 ], User.prototype, "lastName", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", String)
+], User.prototype, "position", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'decimal', precision: 10, scale: 2, nullable: true }),
+    __metadata("design:type", Number)
+], User.prototype, "salary", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", String)
+], User.prototype, "paymentDay", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ default: false }),
+    __metadata("design:type", Boolean)
+], User.prototype, "isRegistered", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", Date)
+], User.prototype, "hiringDate", void 0);
+__decorate([
     (0, typeorm_1.ManyToOne)(() => hotel_entity_1.Hotel, (hotel) => hotel.users, { nullable: true }),
     __metadata("design:type", hotel_entity_1.Hotel)
 ], User.prototype, "hotel", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", String)
+], User.prototype, "roleId", void 0);
+__decorate([
+    (0, typeorm_1.ManyToOne)(() => role_entity_1.Role, (role) => role.users, { nullable: true }),
+    __metadata("design:type", role_entity_1.Role)
+], User.prototype, "customRole", void 0);
 __decorate([
     (0, typeorm_1.CreateDateColumn)(),
     __metadata("design:type", Date)

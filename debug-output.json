@@ -1,0 +1,74 @@
+{
+  "hotels": [
+    {
+      "id": "97ee375f-044b-4ebc-a25e-daed0fa6dd6b",
+      "name": "Gran Hotel Avenida",
+      "location": null,
+      "address": "Calle Falsa 123",
+      "contactEmail": "admin@granhotel.com",
+      "createdAt": "2026-01-01T19:24:39.581Z",
+      "rolePermissions": {
+        "employee": [
+          "dashboard",
+          "calendar",
+          "guests",
+          "rooms",
+          "orders"
+        ],
+        "admin": [
+          "all"
+        ]
+      }
+    },
+    {
+      "id": "d9007971-b82e-4f7e-b5f9-0c5fb1050234",
+      "name": "Palikao",
+      "location": "Necochea",
+      "address": "83 329",
+      "contactEmail": "hotelpalikao@gmail.com",
+      "createdAt": "2026-01-01T19:36:35.259Z",
+      "rolePermissions": {
+        "employee": [
+          "dashboard",
+          "calendar",
+          "guests",
+          "rooms",
+          "orders"
+        ],
+        "admin": [
+          "all"
+        ]
+      }
+    }
+  ],
+  "data_distribution": {
+    "rooms": [
+      {
+        "hotelId": "97ee375f-044b-4ebc-a25e-daed0fa6dd6b",
+        "count": "23"
+      }
+    ],
+    "guests": [
+      {
+        "hotelId": "97ee375f-044b-4ebc-a25e-daed0fa6dd6b",
+        "count": "10"
+      }
+    ],
+    "reservations": [
+      {
+        "hotelId": "97ee375f-044b-4ebc-a25e-daed0fa6dd6b",
+        "count": "15"
+      }
+    ],
+    "user": [
+      {
+        "hotelId": "97ee375f-044b-4ebc-a25e-daed0fa6dd6b",
+        "count": "2"
+      },
+      {
+        "hotelId": "d9007971-b82e-4f7e-b5f9-0c5fb1050234",
+        "count": "1"
+      }
+    ]
+  }
+}

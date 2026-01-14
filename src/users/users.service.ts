@@ -18,7 +18,21 @@ export class UsersService implements OnModuleInit {
     }
 
     async findOne(username: string): Promise<User | undefined> {
-        return this.usersRepository.findOne({ where: { email: username } });
+        return this.usersRepository.findOne({ where: { email: username }, relations: ['hotel', 'customRole'] });
+    }
+
+    async update(id: string, updates: Partial<User>): Promise<User> {
+        const user = await this.usersRepository.findOne({ where: { id } });
+        if (!user) {
+            throw new Error('User not found');
+        }
+
+        if (updates.password) {
+            updates.password = await bcrypt.hash(updates.password, 10);
+        }
+
+        Object.assign(user, updates);
+        return this.usersRepository.save(user);
     }
 
     async create(userData: Partial<User>): Promise<User> {
@@ -72,8 +86,8 @@ export class UsersService implements OnModuleInit {
 
     async findAll(hotelId?: string): Promise<User[]> {
         if (hotelId) {
-            return this.usersRepository.find({ where: { hotelId } });
+            return this.usersRepository.find({ where: { hotelId }, relations: ['hotel', 'customRole'] });
         }
-        return this.usersRepository.find();
+        return this.usersRepository.find({ relations: ['hotel', 'customRole'] });
     }
 }

@@ -1,25 +1,27 @@
-import { Controller, Get, Post, Body, Patch, Param, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Query, Request, UseGuards } from '@nestjs/common';
 import { ReservationsService } from './reservations.service';
 import { Reservation } from '../entities/reservation.entity';
+import { AuthGuard } from '@nestjs/passport';
 
 @Controller('reservations')
+@UseGuards(AuthGuard('jwt'))
 export class ReservationsController {
   constructor(private readonly reservationsService: ReservationsService) { }
 
   @Get()
-  findAll() {
-    return this.reservationsService.findAll();
+  findAll(@Request() req) {
+    return this.reservationsService.findAll(req.user.hotelId);
   }
 
   @Get('occupancy')
-  getOccupancy(@Query('date') date: string) {
+  getOccupancy(@Query('date') date: string, @Request() req) {
     if (!date) {
       // Default to tomorrow if not provided? Or throw error. 
       // Let's assume frontend provides it. If not, today.
       const today = new Date().toISOString().split('T')[0];
-      return this.reservationsService.getOccupancy(today);
+      return this.reservationsService.getOccupancy(today, req.user.hotelId);
     }
-    return this.reservationsService.getOccupancy(date);
+    return this.reservationsService.getOccupancy(date, req.user.hotelId);
   }
 
   @Get('check-availability')
@@ -34,13 +36,13 @@ export class ReservationsController {
   }
 
   @Post()
-  create(@Body() reservation: any) {
-    return this.reservationsService.create(reservation);
+  create(@Body() reservation: any, @Request() req) {
+    return this.reservationsService.create(reservation, req.user.hotelId);
   }
 
   @Post('block')
-  blockRoom(@Body() body: { roomId: number, start: string, end: string, reason: string }) {
-    return this.reservationsService.blockRoom(body.roomId, body.start, body.end, body.reason);
+  blockRoom(@Body() body: { roomId: number, start: string, end: string, reason: string }, @Request() req) {
+    return this.reservationsService.blockRoom(body.roomId, body.start, body.end, body.reason, req.user.hotelId);
   }
 
   @Patch(':id')
