@@ -22,6 +22,9 @@ import { Expense } from './entities/expense.entity';
 import { SalaryHistory } from './entities/salary-history.entity';
 import { ExpensesModule } from './expenses/expenses.module';
 
+import { JobPosition } from './entities/job-position.entity';
+import { PositionsModule } from './positions/positions.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot(),
@@ -32,7 +35,7 @@ import { ExpensesModule } from './expenses/expenses.module';
       username: process.env.DB_USER,
       password: process.env.DB_PASSWORD,
       database: process.env.DB_NAME,
-      entities: [Room, Guest, Reservation, MaintenanceTask, User, Hotel, Role, Employee, EmployeePayment, Expense, SalaryHistory],
+      entities: [Room, Guest, Reservation, MaintenanceTask, User, Hotel, Role, Employee, EmployeePayment, Expense, SalaryHistory, JobPosition],
       synchronize: true, // Desactivar en producción
     }),
     RoomsModule,
@@ -44,6 +47,7 @@ import { ExpensesModule } from './expenses/expenses.module';
     RolesModule,
     EmployeesModule,
     ExpensesModule,
+    PositionsModule,
   ],
 })
 export class AppModule { }
